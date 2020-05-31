@@ -1,0 +1,45 @@
+{{define "base"}}
+<!doctype html>
+<html>
+  <head>
+{{template "headtag" .}}
+  </head>
+  <body>
+    <div id="info" class="ui hidden info message">
+      <i class="close icon"></i>
+      <div class="header">
+        MP3 file has been sent. Please wait...
+      </div>
+    </div>
+    <h1 class="ui center aligned header">Transcribe</h1>
+    <div class="main ui container">
+      <form class="ui segment" method="POST">
+        <div class="content">
+          <div class="ui form">
+            <div class="field">
+              <audio id="preview" controls src=""></audio>
+            </div>
+            <div class="field">
+              <label>MP3 File</label>
+              <div class="ui input">
+                <input id="mp3" type="file" name="mp3" accept=".mp3" onchange="ChangeAudio();">
+              </div>
+            </div>
+            <div class="field">
+              <div id="submit" class="ui green button" onclick="SubmitForm();">Send</div>
+            </div>
+          </div>
+        </div>
+        <input id="action" type="hidden" name="action" value="starttranscription">
+      </form>
+    </div>
+    <div id="warning" class="ui hidden warning message"></div>
+    <div id="result" class="ui hidden info message">
+      <div class="header">
+        Result
+      </div>
+      <p id="result_json"></p>
+    </div>
+  </body>
+</html>
+{{end}}
