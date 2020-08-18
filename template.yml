@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless Transcribe Page
+
+Parameters:
+  ApplicationName:
+    Type: String
+    Default: 'ServerlessTranscribePage'
+  TranscribeLanguageCode:
+    Type: String
+    Default: 'ja-JP'
+  FrontPageApiStageName:
+    Type: String
+    Default: 'ProdStage'
+
+Resources:
+  FrontPageApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: ServerlessTranscribePageApi
+      EndpointConfiguration: REGIONAL
+      StageName: !Ref FrontPageApiStageName
+  FileBucket:
+    Type: AWS::S3::Bucket
+  FrontPageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ServerlessTranscribePageFrontFunction
+      CodeUri: bin/
+      Handler: main
+      MemorySize: 256
+      Runtime: go1.x
+      Description: 'Test Front Function'
+      Policies:
+      Environment:
+        Variables:
+          REGION: !Ref 'AWS::Region'
+          API_PATH: !Join [ '', [ '/', !Ref FrontPageApiStageName, '/api'] ]
+      Events:
+        FrontPageApi:
+          Type: Api
+          Properties:
+            Path: '/'
+            Method: get
+            RestApiId: !Ref FrontPageApi
+  MainFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ServerlessTranscribePageApiFunction
+      CodeUri: api/bin/
+      Handler: main
+      MemorySize: 256
+      Runtime: go1.x
+      Description: 'Test Transcribe Function'
+      Policies:
+      - S3CrudPolicy:
+          BucketName: !Ref FileBucket
+      - Statement:
+        - Sid: TranscribeJobPolicy
+          Effect: Allow
+          Action:
+          - transcribe:GetTranscriptionJob
+          - transcribe:ListTranscriptionJobs
+          - transcribe:StartTranscriptionJob
+          Resource: '*'
+      Environment:
+        Variables:
+          REGION: !Ref 'AWS::Region'
+          BUCKET_NAME: !Ref 'FileBucket'
+          LANGUAGE_CODE: !Ref 'TranscribeLanguageCode'
+      Events:
+        FrontPageApi:
+          Type: Api
+          Properties:
+            Path: '/api'
+            Method: post
+            RestApiId: !Ref FrontPageApi
+
+Outputs:
+  APIURI:
+    Description: "URI"
+    Value: !Join [ '', [ 'https://', !Ref FrontPageApi, '.execute-api.',!Ref 'AWS::Region','.amazonaws.com/',!Ref FrontPageApiStageName,'/'] ]
