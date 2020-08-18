@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"fmt"
 	"log"
 	"time"
@@ -27,10 +28,7 @@ type Response events.APIGatewayProxyResponse
 
 const layout       string = "2006-01-02 15:04"
 const layout2      string = "20060102150405"
-const languageCode string = "ja-JP"
 const mediaFormat  string = "mp3"
-const bucketName   string = "your-bucket-name"
-const bucketRegion string = "ap-northeast-1"
 const S3MediaPath  string = "media"
 
 func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (Response, error) {
@@ -92,7 +90,7 @@ func startTranscription(filedata string)(string, error) {
 		return "", err
 	}
 	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(bucketRegion)},
+		Region: aws.String(os.Getenv("REGION"))},
 	)
 	if err != nil {
 		return "", err
@@ -102,7 +100,7 @@ func startTranscription(filedata string)(string, error) {
 	uploader := s3manager.NewUploader(sess)
 	_, err = uploader.Upload(&s3manager.UploadInput{
 		ACL: aws.String("public-read"),
-		Bucket: aws.String(bucketName),
+		Bucket: aws.String(os.Getenv("BUCKET_NAME")),
 		Key: aws.String(S3MediaPath + "/" + filename),
 		Body: bytes.NewReader(data),
 		ContentType: aws.String(contentType),
@@ -110,16 +108,16 @@ func startTranscription(filedata string)(string, error) {
 	if err != nil {
 		return "", err
 	}
-	url := "s3://" + bucketName + "/" + S3MediaPath + "/" + filename
+	url := "s3://" + os.Getenv("BUCKET_NAME") + "/" + S3MediaPath + "/" + filename
 
 	svc := transcribeservice.New(session.New(), &aws.Config{
-		Region: aws.String("ap-northeast-1"),
+		Region: aws.String(os.Getenv("REGION")),
 	})
 
 	input := &transcribeservice.StartTranscriptionJobInput{
 		TranscriptionJobName: aws.String(filename),
-		LanguageCode: aws.String(languageCode),
-		OutputBucketName: aws.String(bucketName),
+		LanguageCode: aws.String(os.Getenv("LANGUAGE_CODE")),
+		OutputBucketName: aws.String(os.Getenv("BUCKET_NAME")),
 		MediaFormat: aws.String(mediaFormat),
 		Media: &transcribeservice.Media{
 			MediaFileUri: aws.String(url),
@@ -135,7 +133,7 @@ func startTranscription(filedata string)(string, error) {
 
 func checkProgress(jobName string)(string, error) {
 	svc := transcribeservice.New(session.New(), &aws.Config{
-		Region: aws.String("ap-northeast-1"),
+		Region: aws.String(os.Getenv("REGION")),
 	})
 
 	input := &transcribeservice.ListTranscriptionJobsInput{
@@ -150,7 +148,7 @@ func checkProgress(jobName string)(string, error) {
 
 func getTranscriptionJob(jobName string)(string, error) {
 	svc := transcribeservice.New(session.New(), &aws.Config{
-		Region: aws.String("ap-northeast-1"),
+		Region: aws.String(os.Getenv("REGION")),
 	})
 
 	input := &transcribeservice.GetTranscriptionJobInput{
@@ -164,10 +162,10 @@ func getTranscriptionJob(jobName string)(string, error) {
 	rep := regexp.MustCompile(`\s*/\s*`)
 	tmp := rep.Split(url, -1)
 	svc_ := s3.New(session.New(), &aws.Config{
-		Region: aws.String(bucketRegion),
+		Region: aws.String(os.Getenv("REGION")),
 	})
 	obj, err2 := svc_.GetObject(&s3.GetObjectInput{
-		Bucket: aws.String(bucketName),
+		Bucket: aws.String(os.Getenv("BUCKET_NAME")),
 		Key:    aws.String(tmp[len(tmp) - 1]),
 	})
 	if err2 != nil {
