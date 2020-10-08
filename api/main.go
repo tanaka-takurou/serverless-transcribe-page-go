@@ -164,14 +164,13 @@ func getTranscriptionJob(ctx context.Context, jobName string)(string, error) {
 	url := stringValue(res.TranscriptionJob.Transcript.TranscriptFileUri)
 	rep := regexp.MustCompile(`\s*/\s*`)
 	tmp := rep.Split(url, -1)
-	tmp_ := strings.Replace(tmp[len(tmp) - 1], "\"", "", 1)
 
 	if s3Client == nil {
 		s3Client = getS3Client()
 	}
 	input_ := &s3.GetObjectInput{
 		Bucket: aws.String(os.Getenv("BUCKET_NAME")),
-		Key:    aws.String(tmp_),
+		Key:    aws.String(tmp[len(tmp) - 1]),
 	}
 	res2, err2 := s3Client.GetObject(ctx, input_)
 	if err2 != nil {
@@ -225,7 +224,8 @@ func getConfig() aws.Config {
 func stringValue(i interface{}) string {
 	var buf bytes.Buffer
 	strVal(reflect.ValueOf(i), 0, &buf)
-	return buf.String()
+	res := buf.String()
+	return res[1:len(res) - 1]
 }
 
 func strVal(v reflect.Value, indent int, buf *bytes.Buffer) {
