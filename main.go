@@ -5,6 +5,7 @@ import (
 	"os"
 	"log"
 	"bytes"
+	"embed"
 	"context"
 	"html/template"
 	"github.com/aws/aws-lambda-go/events"
@@ -17,6 +18,9 @@ type PageData struct {
 }
 
 type Response events.APIGatewayProxyResponse
+
+//go:embed templates
+var templateFS embed.FS
 
 const title string = "Sample Transcribe Page"
 
@@ -34,7 +38,7 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 	fw := io.Writer(buf)
 	dat.Title = title
 	dat.ApiPath = os.Getenv("API_PATH")
-	tmp = template.Must(template.New("").Funcs(funcMap).ParseFiles("templates/index.html", "templates/view.html", "templates/header.html"))
+	tmp = template.Must(template.New("").Funcs(funcMap).ParseFS(templateFS, "templates/index.html", "templates/view.html", "templates/header.html"))
 	if e := tmp.ExecuteTemplate(fw, "base", dat); e != nil {
 		log.Fatal(e)
 	}
